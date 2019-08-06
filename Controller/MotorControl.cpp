@@ -33,6 +33,12 @@ MotorControl::MotorControl(StepperMotor leftFront, StepperMotor leftBack, Steppe
 }
 
 void MotorControl::go(uint8_t angle, uint8_t dir, int maxFreq){
+	Serial.print("Going ");
+	Serial.print(dir?"fordward":"backward");
+	Serial.print(" with ");
+	Serial.print(maxFreq == pwmStepFastFreq ? "high" : "low");
+	Serial.print(" speed, with angle: ");
+	Serial.println(angle);
 
     if(angle < 64){
         digitalWrite(rightFront.dirPin, FORWARD != !dir);
@@ -73,26 +79,18 @@ void MotorControl::go(uint8_t angle, uint8_t dir, int maxFreq){
 }
 
 void MotorControl::forwardHighSpeed(uint8_t angle){
-    Serial.print("Going forward with high speed, yaw rate: ");
-	Serial.println(angle);
     go(angle, FORWARD, pwmStepFastFreq);
 }
 
 void MotorControl::forwardLowSpeed(uint8_t angle){
-    Serial.print("Going forward with low speed, yaw rate: ");
-	Serial.println(angle);
     go(angle, FORWARD, pwmStepSlowFreq);
 }
 
 void MotorControl::backwardHighSpeed(uint8_t angle){
-  Serial.println("Going backward with high speed, yaw rate: ");
-  Serial.println(angle);
-    Serial.println("Going forward with high speed");
     go(angle, BACKWARD, pwmStepFastFreq);
 }
 
 void MotorControl::backwardLowSpeed(uint8_t angle){
-  Serial.println("Going backward with low speed, yaw rate: "+angle);
     go(angle, BACKWARD, pwmStepSlowFreq);
 }
 
@@ -103,11 +101,13 @@ void MotorControl::stop(){
 }
 
 void MotorControl::collect(uint8_t angle){
-  Serial.println("Collector to: " + angle);
+  Serial.print("Collector to: " );
+  Serial.println(angle);
     ledcWrite(pwmChannelCollector, angle);
 }
 
 void MotorControl::dump(uint8_t angle){
-  Serial.println("Dumper to: " + angle);
+  Serial.print("Dumper to: ");
+  Serial.println(angle);
     ledcWrite(pwmChannelDumper, angle);
 }

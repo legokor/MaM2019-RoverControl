@@ -46,7 +46,9 @@ void loop() {
 	if(Serial.available()){
 		Serial.readBytes(cmd,3);
 		Serial.readBytes(&angle, 1);
-		Serial.println(cmd);
+		Serial.print("Command received: ");
+		Serial.print(cmd);
+		Serial.print(" with parameter: ");
 		Serial.println(angle);
 		
 		if (strcmp(cmd, "MFH") == 0)
