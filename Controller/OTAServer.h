@@ -6,6 +6,7 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <Update.h>
+#include "CommandController.h"
 
 class OTAServer {
     private:
@@ -13,14 +14,16 @@ class OTAServer {
         char * ssid;
         char * wifi_password;
         WebServer * webServer;
+        CommandController * cmdController;
 
     public:
-        OTAServer(char * host, char * ssid, char *password);
+        OTAServer(char *host, char *ssid, char *password, CommandController *cmdController);
         ~OTAServer();
         bool begin();
         void addRoutes();
         void startWebServer();
         void handleClient();
+        void handleCommand();
 };
 
 #endif

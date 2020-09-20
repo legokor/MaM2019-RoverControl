@@ -1,4 +1,6 @@
 #include "OTAServer.h"
+#include "CommandController.h"
+#include "MotorControl.h"
 
 //variabls for blinking an LED with Millis
 const int led = 2;				  // ESP32 Pin to which onboard LED is connected
@@ -6,7 +8,9 @@ unsigned long previousMillis = 0; // will store last time LED was updated
 const long interval = 1000;		  // interval at which to blink (milliseconds)
 int ledState = LOW;				  // ledState used to set the LED
 
-OTAServer otaServer("esp32","gmhost2", "legokor12");
+MotorControl motorController;
+CommandController cmdController(&motorController);
+OTAServer otaServer("esp32","gmhost2", "legokor12",&cmdController);
 
 /* setup function */
 void setup(void)

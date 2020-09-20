@@ -2,8 +2,9 @@
 #include "WebPages.h"
 
 
-OTAServer::OTAServer(char * host, char * ssid, char * password) : host(host), ssid(ssid), wifi_password(password){
-    this->webServer = new WebServer(80);       
+OTAServer::OTAServer(char * host, char * ssid, char * password, CommandController * cmdController) : host(host), ssid(ssid), wifi_password(password){
+    this->webServer = new WebServer(80);
+    this->cmdController = cmdController;
 }
 
 OTAServer::~OTAServer(){
@@ -40,6 +41,21 @@ void OTAServer::addRoutes(){
     this->webServer->on("/", HTTP_GET, [=]() {
         this->webServer->sendHeader("Connection", "close");
         this->webServer->send(200, "text/html", WebPages::login + WebPages::style);
+    });
+
+    this->webServer->on("/cmd", HTTP_GET, [=]() {
+        this->webServer->sendHeader("Connection", "close");
+
+        if(this->webServer->hasArg("query")){
+            bool result = this->cmdController->handle(this->webServer->arg("query").c_str());
+            if(result)
+                this->webServer->send(200,"text/html","ok");
+            else
+                this->webServer->send(200,"text/html","query parsing error");
+        }
+        else{
+            this->webServer->send(200, "text/html", "missing query param");
+        }
     });
 
     this->webServer->on("/serverIndex", HTTP_GET, [=]() {
