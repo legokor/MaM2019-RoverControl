@@ -1,35 +1,34 @@
 #include "MotorControl.h"
 
 #define FORWARD 1   //HIGH
-#define BACKWARD 0  //LOW
+#define BACKWARD -1  //LOW
+#define motorInterfaceType 1
 
-MotorControl::MotorControl(StepperMotor leftFront, StepperMotor leftBack, StepperMotor rightFront, StepperMotor rightBack, ServoMotor collector, ServoMotor dumper):leftFront(leftFront),leftBack(leftBack),rightFront(rightBack){
-    pinMode(leftFront.dirPin, OUTPUT);
-    pinMode(leftFront.stepPin, OUTPUT);
-    pinMode(leftBack.dirPin, OUTPUT);
-    pinMode(leftBack.stepPin, OUTPUT);
+MotorControl::MotorControl(StepperMotorPins left, StepperMotorPins right){
+    this->leftStepper = new AccelStepper(motorInterfaceType, left.stepPin, left.dirPin);
+    this->rightStepper = new AccelStepper(motorInterfaceType, right.stepPin, right.dirPin);
+    
+    this->leftStepper->setMaxSpeed(this->pwmStepFastFreq);
+    this->rightStepper->setMaxSpeed(this->pwmStepFastFreq);
 
-    pinMode(rightFront.dirPin, OUTPUT);
-    pinMode(rightFront.stepPin, OUTPUT);
-    pinMode(rightBack.dirPin, OUTPUT);
-    pinMode(rightBack.stepPin, OUTPUT);
+    this->dumperServo = new Servo();
+    this->collectorServo = new Servo();
+    
+}
+MotorControl::~MotorControl(){
+    delete this->leftStepper;
+    delete this->rightStepper;
+    delete this->dumperServo;
+    delete this->collectorServo;
+}
 
-    pinMode(collector.signalPin, OUTPUT);
-    pinMode(dumper.signalPin, OUTPUT);
-
-    ledcSetup(pwmChannelLeft, pwmStepFastFreq, 8);
-    ledcAttachPin(leftFront.stepPin, pwmChannelLeft);
-    ledcAttachPin(leftBack.stepPin, pwmChannelLeft);
-
-    ledcSetup(pwmChannelRight, pwmStepFastFreq, 8);
-    ledcAttachPin(rightFront.stepPin, pwmChannelRight);
-    ledcAttachPin(rightBack.stepPin, pwmChannelRight);
-
-    ledcSetup(pwmChannelDumper, pwmServoFreq, 8);
-    ledcAttachPin(dumper.signalPin, pwmChannelDumper);
-
-    ledcSetup(pwmChannelCollector, pwmServoFreq, 8);
-    ledcAttachPin(collector.signalPin, pwmChannelCollector);
+void MotorControl::begin(StepperModePins modePins, ServoPins collector, ServoPins dumper)
+{
+    this->dumperServo->attach(dumper.signalPin);
+    this->collectorServo->attach(collector.signalPin);
+    pinMode(modePins.m0, OUTPUT);
+    pinMode(modePins.m1, OUTPUT);
+    pinMode(modePins.m2, OUTPUT);
 }
 
 void MotorControl::go(uint8_t angle, uint8_t dir, int maxFreq){
@@ -40,42 +39,27 @@ void MotorControl::go(uint8_t angle, uint8_t dir, int maxFreq){
 	Serial.print(" speed, with angle: ");
 	Serial.println(angle);
 
+    int leftSpeed = 0;
+    int rightSpeed = 0;
+
     if(angle < 64){
-        digitalWrite(rightFront.dirPin, FORWARD != !dir);
-        digitalWrite(rightBack.dirPin, FORWARD != !dir);
-        digitalWrite(leftFront.dirPin, BACKWARD != !dir);
-        digitalWrite(leftBack.dirPin, BACKWARD != !dir);
-
-        ledcSetup(pwmChannelRight, maxFreq, 8);    
-        ledcSetup(pwmChannelLeft, maxFreq * (64- angle) / 64, 8);
+       leftSpeed = maxFreq;
+       rightSpeed = maxFreq * (64 - angle) / 64;
     }else if(angle < 128){
-        digitalWrite(rightFront.dirPin, FORWARD != !dir);
-        digitalWrite(rightBack.dirPin, FORWARD != !dir);
-        digitalWrite(leftFront.dirPin, FORWARD != !dir);
-        digitalWrite(leftBack.dirPin, FORWARD != !dir);
-
-        ledcSetup(pwmChannelRight, maxFreq, 8);   
-        ledcSetup(pwmChannelLeft, maxFreq * (angle - 64) / 64, 8);
+        leftSpeed = maxFreq;
+        rightSpeed = maxFreq * (angle - 64) / 64;
     }else if(angle < 192){
-        digitalWrite(rightFront.dirPin, FORWARD != !dir);
-        digitalWrite(rightBack.dirPin, FORWARD != !dir);
-        digitalWrite(leftFront.dirPin, FORWARD != !dir);
-        digitalWrite(leftBack.dirPin, FORWARD != !dir);
-
-        ledcSetup(pwmChannelRight, maxFreq * (192 - angle) / 64, 8);   
-        ledcSetup(pwmChannelLeft, maxFreq, 8);
+        leftSpeed = maxFreq * (192 - angle) / 64;
+        rightSpeed = maxFreq;
     }else{
-        digitalWrite(rightFront.dirPin, BACKWARD != !dir);
-        digitalWrite(rightBack.dirPin, BACKWARD != !dir);
-        digitalWrite(leftFront.dirPin, FORWARD != !dir);
-        digitalWrite(leftBack.dirPin, FORWARD != !dir);
-
-        ledcSetup(pwmChannelRight, maxFreq * (angle - 192) / 64, 8);   
-        ledcSetup(pwmChannelLeft, maxFreq, 8);
+        leftSpeed = maxFreq * (angle - 192) / 64;
+        rightSpeed = maxFreq;
     }
 
-    ledcWrite(pwmChannelLeft, 127);
-    ledcWrite(pwmChannelRight, 127);
+    this->leftStepper->setSpeed(leftSpeed*dir);
+    this->rightStepper->setSpeed(rightSpeed*dir*-1);
+    this->leftStepper->runSpeed();
+    this->rightStepper->runSpeed();
 }
 
 void MotorControl::forwardHighSpeed(uint8_t angle){
@@ -96,18 +80,18 @@ void MotorControl::backwardLowSpeed(uint8_t angle){
 
 void MotorControl::stop(){
   Serial.println("STOP");
-    ledcWrite(pwmChannelLeft, 0);
-    ledcWrite(pwmChannelRight, 0);
+  this->leftStepper->stop();
+  this->rightStepper->stop();
 }
 
 void MotorControl::collect(uint8_t angle){
   Serial.print("Collector to: " );
   Serial.println(angle);
-    ledcWrite(pwmChannelCollector, angle);
+  this->collectorServo->write(angle);
 }
 
 void MotorControl::dump(uint8_t angle){
   Serial.print("Dumper to: ");
   Serial.println(angle);
-    ledcWrite(pwmChannelDumper, angle);
+  this->dumperServo->write(angle);
 }

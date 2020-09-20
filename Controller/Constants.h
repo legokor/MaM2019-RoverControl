@@ -1,7 +1,7 @@
 #if !defined(CONSTANTS_H)
-#define CONSTANTS_H 
+#define CONSTANTS_H
 
-
+#define motorInterfaceType 1
 //MOTOR PINS 
 #define MOTOR_1_STEP 27
 #define MOTOR_1_DIR 14
